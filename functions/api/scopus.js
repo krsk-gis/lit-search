@@ -1,18 +1,7 @@
-// Cloudflare Worker: kiszolgálja a statikus oldalt (public/), és proxyzza
-// a Scopus (Elsevier) Search API-t a /api/scopus útvonalon úgy, hogy az
-// ELSEVIER_API_KEY soha nem kerül a kliens (böngésző) oldalra - csak ez a
-// worker ismeri, a projekt titkos környezeti változójaként (secret) tárolva.
-
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === "/api/scopus") {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
-      return handleScopus(request, env);
-    }
-    return env.ASSETS.fetch(request);
-  },
-};
+// Cloudflare Pages Function: /api/scopus
+// Proxyzza a Scopus (Elsevier) Search API-t úgy, hogy az ELSEVIER_API_KEY
+// soha nem kerül a kliens (böngésző) oldalra - csak ez a function ismeri,
+// a Cloudflare Pages projekt titkos környezeti változójaként tárolva.
 
 function corsHeaders() {
   return {
@@ -32,8 +21,10 @@ function buildQuery(topic, raw, yearFrom, yearTo) {
   return query;
 }
 
-async function handleScopus(request, env) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
+
   const topic = url.searchParams.get("topic");
   if (!topic) return json({ error: 'Hiányzó "topic" paraméter.' }, 400);
 
@@ -93,4 +84,8 @@ async function handleScopus(request, env) {
   }
 
   return json({ results });
+}
+
+export async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: corsHeaders() });
 }
