@@ -37,7 +37,7 @@ export async function onRequestGet(context) {
   const yearFrom = parseInt(url.searchParams.get("yearFrom"), 10) || null;
   const yearTo = parseInt(url.searchParams.get("yearTo"), 10) || null;
 
-  const sortMap = { relevance: null, citations: "-citedby-count", date: "-coverDate" };
+  const sortMap = { relevance: "relevancy", citations: "-citedby-count", date: "-coverDate" };
   const query = buildQuery(topic, raw, yearFrom, yearTo);
 
   const results = [];
