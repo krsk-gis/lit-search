@@ -38,7 +38,7 @@ export async function onRequestGet(context) {
   const yearFrom = parseInt(url.searchParams.get("yearFrom"), 10) || null;
   const yearTo = parseInt(url.searchParams.get("yearTo"), 10) || null;
 
-  const sortMap = { relevance: null, citations: "-citedby-count", date: "-coverDate" };
+  const sortMap = { relevance: "-coverDate", citations: "-citedby-count", date: "-coverDate" };
   const query = buildQuery(topic, raw, yearFrom, yearTo);
 
   const results = [];
@@ -48,14 +48,14 @@ export async function onRequestGet(context) {
       query,
       count: String(Math.min(count - results.length, 25)),
       start: String(start),
-      httpAccept: "application/json",
-      apiKey,
+      sort: sortMap[sort],
     });
-    if (sortMap[sort]) params.set("sort", sortMap[sort]);
 
     let resp;
     try {
-      resp = await fetch(`https://api.elsevier.com/content/search/scopus?${params}`);
+      resp = await fetch(`https://api.elsevier.com/content/search/scopus?${params}`, {
+        headers: { "X-ELS-APIKey": apiKey, Accept: "application/json" },
+      });
     } catch (e) {
       return json({ error: "Nem sikerült elérni a Scopus API-t.", detail: String(e) }, 502);
     }
