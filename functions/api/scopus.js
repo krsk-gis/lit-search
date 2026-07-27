@@ -44,14 +44,18 @@ export async function onRequestGet(context) {
   const results = [];
   let start = 0;
   while (results.length < count) {
-    const params = new URLSearchParams({ query, count: String(Math.min(count - results.length, 25)), start: String(start) });
+    const params = new URLSearchParams({
+      query,
+      count: String(Math.min(count - results.length, 25)),
+      start: String(start),
+      httpAccept: "application/json",
+      apiKey,
+    });
     if (sortMap[sort]) params.set("sort", sortMap[sort]);
 
     let resp;
     try {
-      resp = await fetch(`https://api.elsevier.com/content/search/scopus?${params}`, {
-        headers: { "X-ELS-APIKey": apiKey, Accept: "application/json" },
-      });
+      resp = await fetch(`https://api.elsevier.com/content/search/scopus?${params}`);
     } catch (e) {
       return json({ error: "Nem sikerült elérni a Scopus API-t.", detail: String(e) }, 502);
     }
