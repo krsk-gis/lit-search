@@ -12,13 +12,12 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { topic, sort: sortParam, count: countParam, yearFrom, yearTo } = req.query;
+  const { topic, count: countParam, yearFrom, yearTo } = req.query;
   if (!topic) {
     res.status(400).json({ error: 'Hiányzó "topic" paraméter.' });
     return;
   }
 
-  const sort = sortParam || "relevance";
   const count = Math.min(parseInt(countParam, 10) || 50, 100);
 
   const params = new URLSearchParams({
@@ -61,9 +60,6 @@ module.exports = async (req, res) => {
       source: "Semantic Scholar",
     };
   });
-
-  if (sort === "citations") results.sort((a, b) => b.citations - a.citations);
-  else if (sort === "date") results.sort((a, b) => (b.year || "0").localeCompare(a.year || "0"));
 
   res.status(200).json({ results });
 };

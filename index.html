@@ -117,7 +117,7 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v1.1</span>
+    <span class="version">v1.5</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
@@ -212,12 +212,7 @@ function interleave(lists) {
   return out;
 }
 
-async function fetchOpenAlex(topic, sort, count, yearFrom, yearTo) {
-  const sortMap = {
-    relevance: 'relevance_score:desc',
-    citations: 'cited_by_count:desc',
-    date: 'publication_date:desc',
-  };
+async function fetchOpenAlex(topic, count, yearFrom, yearTo) {
   const phrase = topic.replace(/"/g, '');
   const filters = [`title_and_abstract.search:"${phrase}"`];
   if (yearFrom) filters.push(`publication_year:>${yearFrom - 1}`);
@@ -225,7 +220,7 @@ async function fetchOpenAlex(topic, sort, count, yearFrom, yearTo) {
   const params = new URLSearchParams({
     filter: filters.join(','),
     per_page: String(Math.min(count, 200)),
-    sort: sortMap[sort],
+    sort: 'relevance_score:desc',
   });
 
   const resp = await fetch(`https://api.openalex.org/works?${params}`);
@@ -251,8 +246,8 @@ async function fetchOpenAlex(topic, sort, count, yearFrom, yearTo) {
   });
 }
 
-async function fetchProxy(endpoint, label, topic, sort, count, yearFrom, yearTo) {
-  const params = new URLSearchParams({ topic, sort, count: String(count) });
+async function fetchProxy(endpoint, label, topic, count, yearFrom, yearTo) {
+  const params = new URLSearchParams({ topic, count: String(count) });
   if (yearFrom) params.set('yearFrom', String(yearFrom));
   if (yearTo) params.set('yearTo', String(yearTo));
 
@@ -266,16 +261,16 @@ async function fetchProxy(endpoint, label, topic, sort, count, yearFrom, yearTo)
   return data.results || [];
 }
 
-function fetchScopus(topic, sort, count, yearFrom, yearTo) {
-  return fetchProxy('/api/scopus', 'Scopus', topic, sort, count, yearFrom, yearTo);
+function fetchScopus(topic, count, yearFrom, yearTo) {
+  return fetchProxy('/api/scopus', 'Scopus', topic, count, yearFrom, yearTo);
 }
 
-function fetchSemanticScholar(topic, sort, count, yearFrom, yearTo) {
-  return fetchProxy('/api/semanticscholar', 'Semantic Scholar', topic, sort, count, yearFrom, yearTo);
+function fetchSemanticScholar(topic, count, yearFrom, yearTo) {
+  return fetchProxy('/api/semanticscholar', 'Semantic Scholar', topic, count, yearFrom, yearTo);
 }
 
-function fetchCrossref(topic, sort, count, yearFrom, yearTo) {
-  return fetchProxy('/api/crossref', 'Crossref', topic, sort, count, yearFrom, yearTo);
+function fetchCrossref(topic, count, yearFrom, yearTo) {
+  return fetchProxy('/api/crossref', 'Crossref', topic, count, yearFrom, yearTo);
 }
 
 function renderResults(items) {
@@ -323,7 +318,7 @@ form.addEventListener('submit', async (e) => {
   resultsEl.innerHTML = '';
 
   const settled = await Promise.allSettled(
-    selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, sort, count, yearFrom, yearTo))
+    selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, count, yearFrom, yearTo))
   );
 
   const lists = [];
@@ -334,16 +329,13 @@ form.addEventListener('submit', async (e) => {
     else errors.push(`${label}: ${result.reason.message}`);
   });
 
-  let merged;
-  if (sort === 'relevance') {
-    merged = interleave(lists);
-  } else {
-    merged = lists.flat();
-    const key = sort === 'citations' ? 'citations' : 'year';
-    merged.sort((a, b) => sort === 'citations' ? b.citations - a.citations : (b.year || '0').localeCompare(a.year || '0'));
-  }
-
+  // Minden forrás relevancia (cím/absztrakt-egyezés) szerint ad vissza
+  // találatokat - ez a lekérdezés alapja. A "Rendezés" ezen a már releváns
+  // halmazon rendez át, nem befolyásolja, hogy mi kerül be a listába.
+  const merged = interleave(lists);
   const results = dedupe(merged).slice(0, count);
+  if (sort === 'citations') results.sort((a, b) => b.citations - a.citations);
+  else if (sort === 'date') results.sort((a, b) => (b.year || '0').localeCompare(a.year || '0'));
 
   statusEl.textContent = `${results.length} egyedi találat.` + (errors.length ? ' Hiba: ' + errors.join('; ') : '');
   renderResults(results);

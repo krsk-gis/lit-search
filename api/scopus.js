@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { topic, sort: sortParam, count: countParam, yearFrom: yearFromParam, yearTo: yearToParam } = req.query;
+  const { topic, count: countParam, yearFrom: yearFromParam, yearTo: yearToParam } = req.query;
   const raw = req.query.raw === "1";
 
   if (!topic) {
@@ -32,12 +32,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const sort = sortParam || "relevance";
   const count = Math.min(parseInt(countParam, 10) || 50, 100);
   const yearFrom = parseInt(yearFromParam, 10) || null;
   const yearTo = parseInt(yearToParam, 10) || null;
 
-  const sortMap = { relevance: "-coverDate", citations: "-citedby-count", date: "-coverDate" };
+  // A Scopus API rendszerhibát ad, ha a sort paramétert kihagyjuk vagy
+  // "relevancy"-t küldünk - -coverDate az egyetlen igazoltan működő érték,
+  // ezt használjuk mindig; a hivatkozás/dátum szerinti rendezést a kliens
+  // végzi a már lekért találatokon.
   const query = buildQuery(topic, raw, yearFrom, yearTo);
 
   const results = [];
@@ -47,7 +49,7 @@ module.exports = async (req, res) => {
       query,
       count: String(Math.min(count - results.length, 25)),
       start: String(start),
-      sort: sortMap[sort],
+      sort: "-coverDate",
     });
 
     let resp;
