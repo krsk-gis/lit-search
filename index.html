@@ -124,8 +124,9 @@
   <div class="how-it-works">
     Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — a rendszer ezt egzakt
     kifejezésként keresi a cím és az absztrakt mezőkben mind a négy adatbázisban, majd a találatokat
-    összefésüli és szűri a duplikátumokat. Szűkítheted évtartományra, és rendezheted relevancia,
-    hivatkozásszám vagy dátum szerint.
+    összefésüli és szűri a duplikátumokat. A találatok alapból relevancia szerint jelennek meg;
+    ezen belül szűkítheted évtartományra, és igény szerint átrendezheted hivatkozásszám vagy dátum
+    szerint is.
   </div>
 
   <form id="searchForm">
@@ -144,9 +145,9 @@
     <div class="field">
       <label for="sort">Rendezés</label>
       <select id="sort">
-        <option value="relevance">Relevancia</option>
-        <option value="citations">Hivatkozások</option>
-        <option value="date">Dátum</option>
+        <option value="relevance">Alapértelmezett</option>
+        <option value="citations">Hivatkozások szerint</option>
+        <option value="date">Dátum szerint</option>
       </select>
     </div>
     <div class="field">
