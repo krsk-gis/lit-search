@@ -1,8 +1,9 @@
 // Vercel Serverless Function: /api/semanticscholar
 // Proxyzza a Semantic Scholar API-t szerver-oldalról, mert az API nem küld
 // CORS fejlécet, így böngészőből közvetlenül nem hívható. A SEMANTIC_SCHOLAR_API_KEY
-// opcionális - ha be van állítva, magasabb rate limitet kapunk, ha nincs, a
-// kulcs nélküli (erősen korlátozott) publikus keretet használja az API.
+// opcionális - ha be van állítva (Vercel Environment Variables), magasabb
+// rate limitet kapunk, ha nincs, a kulcs nélküli (erősen korlátozott)
+// publikus keretet használja az API.
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
