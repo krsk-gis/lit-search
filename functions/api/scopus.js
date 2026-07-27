@@ -15,7 +15,8 @@ function json(body, status = 200) {
 }
 
 function buildQuery(topic, raw, yearFrom, yearTo) {
-  let query = raw ? topic : `TITLE-ABS-KEY(${topic})`;
+  const phrase = topic.replace(/"/g, "");
+  let query = raw ? topic : `TITLE-ABS-KEY("${phrase}")`;
   if (yearFrom) query += ` AND PUBYEAR > ${yearFrom - 1}`;
   if (yearTo) query += ` AND PUBYEAR < ${yearTo + 1}`;
   return query;
@@ -37,7 +38,7 @@ export async function onRequestGet(context) {
   const yearFrom = parseInt(url.searchParams.get("yearFrom"), 10) || null;
   const yearTo = parseInt(url.searchParams.get("yearTo"), 10) || null;
 
-  const sortMap = { relevance: "relevancy", citations: "-citedby-count", date: "-coverDate" };
+  const sortMap = { relevance: null, citations: "-citedby-count", date: "-coverDate" };
   const query = buildQuery(topic, raw, yearFrom, yearTo);
 
   const results = [];
