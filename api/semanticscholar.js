@@ -1,6 +1,8 @@
 // Vercel Serverless Function: /api/semanticscholar
 // Proxyzza a Semantic Scholar API-t szerver-oldalról, mert az API nem küld
-// CORS fejlécet, így böngészőből közvetlenül nem hívható. Nem kell hozzá kulcs.
+// CORS fejlécet, így böngészőből közvetlenül nem hívható. A SEMANTIC_SCHOLAR_API_KEY
+// opcionális - ha be van állítva, magasabb rate limitet kapunk, ha nincs, a
+// kulcs nélküli (erősen korlátozott) publikus keretet használja az API.
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -25,9 +27,12 @@ module.exports = async (req, res) => {
   });
   if (yearFrom || yearTo) params.set("year", `${yearFrom || ""}-${yearTo || ""}`);
 
+  const headers = {};
+  if (process.env.SEMANTIC_SCHOLAR_API_KEY) headers["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
+
   let resp;
   try {
-    resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`);
+    resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`, { headers });
   } catch (e) {
     res.status(502).json({ error: "Nem sikerült elérni a Semantic Scholar API-t.", detail: String(e) });
     return;

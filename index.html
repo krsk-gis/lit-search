@@ -27,8 +27,12 @@
     line-height: 1.5;
   }
   .container { max-width: 1100px; margin: 0 auto; }
+  .title-row { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
   h1 { color: var(--accent-dark); text-align: center; margin-bottom: 4px; font-size: 2em; }
-  .subtitle { text-align: center; color: var(--muted); margin-bottom: 30px; font-size: 0.95em; }
+  .version { color: var(--muted); font-size: 0.65em; font-weight: 600; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 4px; font-size: 0.95em; }
+  .sources-note { text-align: center; color: var(--muted); margin-bottom: 10px; font-size: 0.8em; }
+  .how-it-works { text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 0.75em; opacity: 0.85; }
 
   form {
     background: var(--card);
@@ -54,17 +58,6 @@
   .topic-field { flex: 1 1 260px; min-width: 200px; }
   .topic-field input { width: 100%; }
   .year-field input { width: 90px; }
-  .sources-field { flex: 1 1 100%; }
-  .sources-checks { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 2px; }
-  .sources-checks label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.9em;
-    color: var(--text);
-    cursor: pointer;
-  }
-  .sources-checks input[type="checkbox"] { accent-color: var(--accent-dark); width: 15px; height: 15px; }
   button {
     background: var(--accent-dark);
     color: #fff;
@@ -122,8 +115,18 @@
 </head>
 <body>
 <div class="container">
-  <h1>📖 Lit Search</h1>
+  <div class="title-row">
+    <h1>📖 Lit Search</h1>
+    <span class="version">v1.0</span>
+  </div>
   <div class="subtitle">Élő keresés négy szakirodalmi adatbázisban</div>
+  <div class="sources-note">Jelenleg keresett adatbázisok: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
+  <div class="how-it-works">
+    Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — a rendszer ezt egzakt
+    kifejezésként keresi a cím és az absztrakt mezőkben mind a négy adatbázisban, majd a találatokat
+    összefésüli és duplikátumszűri. Szűkítheted évtartományra, és rendezheted relevancia, hivatkozásszám
+    vagy dátum szerint.
+  </div>
 
   <form id="searchForm">
     <div class="field topic-field">
@@ -153,15 +156,6 @@
         <option value="50" selected>50</option>
         <option value="100">100</option>
       </select>
-    </div>
-    <div class="field sources-field">
-      <label>Források</label>
-      <div class="sources-checks">
-        <label><input type="checkbox" class="source-check" value="openalex" checked> OpenAlex</label>
-        <label><input type="checkbox" class="source-check" value="scopus" checked> Scopus</label>
-        <label><input type="checkbox" class="source-check" value="semanticscholar" checked> Semantic Scholar</label>
-        <label><input type="checkbox" class="source-check" value="crossref" checked> Crossref</label>
-      </div>
     </div>
     <button type="submit" id="searchBtn">Keresés</button>
   </form>
@@ -320,9 +314,9 @@ form.addEventListener('submit', async (e) => {
   const yearTo = parseInt(document.getElementById('yearTo').value, 10) || null;
   const sort = document.getElementById('sort').value;
   const count = parseInt(document.getElementById('count').value, 10);
-  const selectedSources = Array.from(document.querySelectorAll('.source-check:checked')).map(c => c.value);
+  const selectedSources = Object.keys(SOURCE_FETCHERS);
 
-  if (!topic || !selectedSources.length) return;
+  if (!topic) return;
 
   searchBtn.disabled = true;
   statusEl.textContent = 'Keresés folyamatban...';
