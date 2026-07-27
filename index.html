@@ -54,6 +54,17 @@
   .topic-field { flex: 1 1 260px; min-width: 200px; }
   .topic-field input { width: 100%; }
   .year-field input { width: 90px; }
+  .sources-field { flex: 1 1 100%; }
+  .sources-checks { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 2px; }
+  .sources-checks label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .sources-checks input[type="checkbox"] { accent-color: var(--accent-dark); width: 15px; height: 15px; }
   button {
     background: var(--accent-dark);
     color: #fff;
@@ -111,7 +122,7 @@
 <body>
 <div class="container">
   <h1>📖 Lit Search</h1>
-  <div class="subtitle">Élő keresés az OpenAlex és a Scopus adatbázisában</div>
+  <div class="subtitle">Élő keresés négy szakirodalmi adatbázisban</div>
 
   <form id="searchForm">
     <div class="field topic-field">
@@ -142,6 +153,15 @@
         <option value="100">100</option>
       </select>
     </div>
+    <div class="field sources-field">
+      <label>Források</label>
+      <div class="sources-checks">
+        <label><input type="checkbox" class="source-check" value="openalex" checked> OpenAlex</label>
+        <label><input type="checkbox" class="source-check" value="scopus" checked> Scopus</label>
+        <label><input type="checkbox" class="source-check" value="semanticscholar" checked> Semantic Scholar</label>
+        <label><input type="checkbox" class="source-check" value="crossref" checked> Crossref</label>
+      </div>
+    </div>
     <button type="submit" id="searchBtn">Keresés</button>
   </form>
 
@@ -149,7 +169,7 @@
   <div class="results" id="results"></div>
 
   <footer>
-    <p>Adatforrás: <strong>OpenAlex</strong> és <strong>Scopus</strong></p>
+    <p>Adatforrás: <strong>OpenAlex</strong>, <strong>Scopus</strong>, <strong>Semantic Scholar</strong>, <strong>Crossref</strong></p>
     <p class="credit">powered by krsk</p>
   </footer>
 </div>
@@ -171,10 +191,10 @@ function dedupe(items) {
   for (const item of items) {
     const doiKey = item.doi ? item.doi.toLowerCase().trim() : null;
     const titleKey = normalizeTitle(item.title);
-    if (doiKey && seenDoi.has(doiKey)) continue;
-    if (!doiKey && seenTitle.has(titleKey)) continue;
+    const isDup = (doiKey && seenDoi.has(doiKey)) || (titleKey && seenTitle.has(titleKey));
+    if (isDup) continue;
     if (doiKey) seenDoi.add(doiKey);
-    seenTitle.add(titleKey);
+    if (titleKey) seenTitle.add(titleKey);
     out.push(item);
   }
   return out;
@@ -236,19 +256,31 @@ async function fetchOpenAlex(topic, sort, count, yearFrom, yearTo) {
   });
 }
 
-async function fetchScopus(topic, sort, count, yearFrom, yearTo) {
+async function fetchProxy(endpoint, label, topic, sort, count, yearFrom, yearTo) {
   const params = new URLSearchParams({ topic, sort, count: String(count) });
   if (yearFrom) params.set('yearFrom', String(yearFrom));
   if (yearTo) params.set('yearTo', String(yearTo));
 
-  const resp = await fetch(`/api/scopus?${params}`);
+  const resp = await fetch(`${endpoint}?${params}`);
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
-    const base = data.error || `Scopus proxy hiba (${resp.status})`;
+    const base = data.error || `${label} proxy hiba (${resp.status})`;
     const detail = data.detail ? ` — ${String(data.detail).slice(0, 400)}` : '';
     throw new Error(base + detail);
   }
   return data.results || [];
+}
+
+function fetchScopus(topic, sort, count, yearFrom, yearTo) {
+  return fetchProxy('/api/scopus', 'Scopus', topic, sort, count, yearFrom, yearTo);
+}
+
+function fetchSemanticScholar(topic, sort, count, yearFrom, yearTo) {
+  return fetchProxy('/api/semanticscholar', 'Semantic Scholar', topic, sort, count, yearFrom, yearTo);
+}
+
+function fetchCrossref(topic, sort, count, yearFrom, yearTo) {
+  return fetchProxy('/api/crossref', 'Crossref', topic, sort, count, yearFrom, yearTo);
 }
 
 function renderResults(items) {
@@ -272,6 +304,13 @@ function renderResults(items) {
   }
 }
 
+const SOURCE_FETCHERS = {
+  openalex: { label: 'OpenAlex', fetch: fetchOpenAlex },
+  scopus: { label: 'Scopus', fetch: fetchScopus },
+  semanticscholar: { label: 'Semantic Scholar', fetch: fetchSemanticScholar },
+  crossref: { label: 'Crossref', fetch: fetchCrossref },
+};
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const topic = document.getElementById('topic').value.trim();
@@ -279,24 +318,25 @@ form.addEventListener('submit', async (e) => {
   const yearTo = parseInt(document.getElementById('yearTo').value, 10) || null;
   const sort = document.getElementById('sort').value;
   const count = parseInt(document.getElementById('count').value, 10);
+  const selectedSources = Array.from(document.querySelectorAll('.source-check:checked')).map(c => c.value);
 
-  if (!topic) return;
+  if (!topic || !selectedSources.length) return;
 
   searchBtn.disabled = true;
   statusEl.textContent = 'Keresés folyamatban...';
   resultsEl.innerHTML = '';
 
-  const [openAlexResult, scopusResult] = await Promise.allSettled([
-    fetchOpenAlex(topic, sort, count, yearFrom, yearTo),
-    fetchScopus(topic, sort, count, yearFrom, yearTo),
-  ]);
+  const settled = await Promise.allSettled(
+    selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, sort, count, yearFrom, yearTo))
+  );
 
   const lists = [];
   const errors = [];
-  if (openAlexResult.status === 'fulfilled') lists.push(openAlexResult.value);
-  else errors.push('OpenAlex: ' + openAlexResult.reason.message);
-  if (scopusResult.status === 'fulfilled') lists.push(scopusResult.value);
-  else errors.push('Scopus: ' + scopusResult.reason.message);
+  settled.forEach((result, i) => {
+    const label = SOURCE_FETCHERS[selectedSources[i]].label;
+    if (result.status === 'fulfilled') lists.push(result.value);
+    else errors.push(`${label}: ${result.reason.message}`);
+  });
 
   let merged;
   if (sort === 'relevance') {
