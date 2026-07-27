@@ -1,42 +1,41 @@
-// Cloudflare Pages Function: /api/scopus
+// Vercel Serverless Function: /api/scopus
 // Proxyzza a Scopus (Elsevier) Search API-t úgy, hogy az ELSEVIER_API_KEY
 // soha nem kerül a kliens (böngésző) oldalra - csak ez a function ismeri,
-// a Cloudflare Pages projekt titkos környezeti változójaként tárolva.
-
-function corsHeaders() {
-  return {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-  };
-}
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: corsHeaders() });
-}
+// a Vercel projekt titkos környezeti változójaként tárolva.
 
 function buildQuery(topic, raw, yearFrom, yearTo) {
-  const phrase = topic.replace(/"/g, "");
+  const phrase = String(topic).replace(/"/g, "");
   let query = raw ? topic : `TITLE-ABS-KEY("${phrase}")`;
   if (yearFrom) query += ` AND PUBYEAR > ${yearFrom - 1}`;
   if (yearTo) query += ` AND PUBYEAR < ${yearTo + 1}`;
   return query;
 }
 
-export async function onRequestGet(context) {
-  const { request, env } = context;
-  const url = new URL(request.url);
+module.exports = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
 
-  const topic = url.searchParams.get("topic");
-  if (!topic) return json({ error: 'Hiányzó "topic" paraméter.' }, 400);
+  const { topic, sort: sortParam, count: countParam, yearFrom: yearFromParam, yearTo: yearToParam } = req.query;
+  const raw = req.query.raw === "1";
 
-  const apiKey = env.ELSEVIER_API_KEY;
-  if (!apiKey) return json({ error: "A szerver nincs konfigurálva (hiányzó ELSEVIER_API_KEY)." }, 500);
+  if (!topic) {
+    res.status(400).json({ error: 'Hiányzó "topic" paraméter.' });
+    return;
+  }
 
-  const raw = url.searchParams.get("raw") === "1";
-  const sort = url.searchParams.get("sort") || "relevance";
-  const count = Math.min(parseInt(url.searchParams.get("count") || "50", 10) || 50, 100);
-  const yearFrom = parseInt(url.searchParams.get("yearFrom"), 10) || null;
-  const yearTo = parseInt(url.searchParams.get("yearTo"), 10) || null;
+  const apiKey = process.env.ELSEVIER_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: "A szerver nincs konfigurálva (hiányzó ELSEVIER_API_KEY)." });
+    return;
+  }
+
+  const sort = sortParam || "relevance";
+  const count = Math.min(parseInt(countParam, 10) || 50, 100);
+  const yearFrom = parseInt(yearFromParam, 10) || null;
+  const yearTo = parseInt(yearToParam, 10) || null;
 
   const sortMap = { relevance: "-coverDate", citations: "-citedby-count", date: "-coverDate" };
   const query = buildQuery(topic, raw, yearFrom, yearTo);
@@ -57,12 +56,14 @@ export async function onRequestGet(context) {
         headers: { "X-ELS-APIKey": apiKey, Accept: "application/json" },
       });
     } catch (e) {
-      return json({ error: "Nem sikerült elérni a Scopus API-t.", detail: String(e) }, 502);
+      res.status(502).json({ error: "Nem sikerült elérni a Scopus API-t.", detail: String(e) });
+      return;
     }
 
     if (!resp.ok) {
       const detail = await resp.text();
-      return json({ error: `Scopus API hiba (${resp.status})`, detail }, resp.status);
+      res.status(resp.status).json({ error: `Scopus API hiba (${resp.status})`, detail });
+      return;
     }
 
     const data = await resp.json();
@@ -88,9 +89,5 @@ export async function onRequestGet(context) {
     if (entries.length < 25) break;
   }
 
-  return json({ results });
-}
-
-export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: corsHeaders() });
-}
+  res.status(200).json({ results });
+};
