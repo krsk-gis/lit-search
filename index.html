@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Szakirodalom-kereső</title>
+<style>
+  :root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --border: #333;
+    --text: #e0e0e0;
+    --muted: #9e9e9e;
+    --accent: #64b5f6;
+    --accent2: #81c784;
+    --tag-bg: #3e2723;
+    --tag-text: #ff8a80;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --border: #ddd;
+      --text: #1a1a1a;
+      --muted: #666;
+      --accent: #1565c0;
+      --accent2: #2e7d32;
+      --tag-bg: #ffe0d6;
+      --tag-text: #b71c1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { color: var(--accent); text-align: center; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 30px; font-size: 0.95em; }
+
+  form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 24px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.8em; color: var(--muted); }
+  .field input, .field select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.95em;
+  }
+  .topic-field { flex: 1 1 260px; min-width: 200px; }
+  .topic-field input { width: 100%; }
+  .year-field input { width: 90px; }
+  button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 20px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+
+  .status { text-align: center; color: var(--muted); margin: 20px 0; min-height: 1.2em; }
+
+  .results { display: flex; flex-direction: column; gap: 14px; }
+  .article {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .article a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 1.02em; }
+  .article a:hover { text-decoration: underline; color: var(--accent); }
+  .meta { color: var(--muted); font-size: 0.85em; margin-top: 6px; }
+  .badge {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    margin-right: 6px;
+    color: var(--accent2);
+  }
+  .citations {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8em;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 0.8em; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Szakirodalom-kereső</h1>
+  <div class="subtitle">Élő keresés az OpenAlex és a Semantic Scholar adatbázisában</div>
+
+  <form id="searchForm">
+    <div class="field topic-field">
+      <label for="topic">Téma / kulcsszavak</label>
+      <input id="topic" type="text" placeholder='pl. "urban development" AND GIS' required>
+    </div>
+    <div class="field year-field">
+      <label for="yearFrom">Évtől</label>
+      <input id="yearFrom" type="number" placeholder="2020">
+    </div>
+    <div class="field year-field">
+      <label for="yearTo">Évig</label>
+      <input id="yearTo" type="number" placeholder="2026">
+    </div>
+    <div class="field">
+      <label for="sort">Rendezés</label>
+      <select id="sort">
+        <option value="relevance">Relevancia</option>
+        <option value="citations">Hivatkozások</option>
+        <option value="date">Dátum</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="count">Találatok</label>
+      <select id="count">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <button type="submit" id="searchBtn">Keresés</button>
+  </form>
+
+  <div class="status" id="status"></div>
+  <div class="results" id="results"></div>
+
+  <footer>
+    Adatforrás: OpenAlex és Semantic Scholar (nyilvános API, kulcs nélkül).
+    A Scopus itt biztonsági okból nem elérhető (a kulcs kliensoldalon nyilvánossá válna) &mdash;
+    Scopus kereséshez használd a helyi CLI eszközt.
+  </footer>
+</div>
+
+<script>
+const form = document.getElementById('searchForm');
+const statusEl = document.getElementById('status');
+const resultsEl = document.getElementById('results');
+const searchBtn = document.getElementById('searchBtn');
+
+function normalizeTitle(t) {
+  return (t || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function dedupe(items) {
+  const seenDoi = new Set();
+  const seenTitle = new Set();
+  const out = [];
+  for (const item of items) {
+    const doiKey = item.doi ? item.doi.toLowerCase().trim() : null;
+    const titleKey = normalizeTitle(item.title);
+    if (doiKey && seenDoi.has(doiKey)) continue;
+    if (!doiKey && seenTitle.has(titleKey)) continue;
+    if (doiKey) seenDoi.add(doiKey);
+    seenTitle.add(titleKey);
+    out.push(item);
+  }
+  return out;
+}
+
+function interleave(lists) {
+  const out = [];
+  let i = 0;
+  let more = true;
+  while (more) {
+    more = false;
+    for (const list of lists) {
+      if (i < list.length) {
+        out.push(list[i]);
+        more = true;
+      }
+    }
+    i++;
+  }
+  return out;
+}
+
+async function fetchOpenAlex(topic, sort, count, yearFrom, yearTo) {
+  const sortMap = {
+    relevance: 'relevance_score:desc',
+    citations: 'cited_by_count:desc',
+    date: 'publication_date:desc',
+  };
+  const params = new URLSearchParams({
+    search: topic,
+    per_page: String(Math.min(count, 200)),
+    sort: sortMap[sort],
+  });
+  const filters = [];
+  if (yearFrom) filters.push(`publication_year:>${yearFrom - 1}`);
+  if (yearTo) filters.push(`publication_year:<${yearTo + 1}`);
+  if (filters.length) params.set('filter', filters.join(','));
+
+  const resp = await fetch(`https://api.openalex.org/works?${params}`);
+  if (!resp.ok) throw new Error(`OpenAlex hiba (${resp.status})`);
+  const data = await resp.json();
+
+  return (data.results || []).map(w => {
+    const authorships = w.authorships || [];
+    const author = authorships.length ? authorships[0].author.display_name : 'N/A';
+    const sourceInfo = (w.primary_location && w.primary_location.source) || {};
+    const doi = (w.doi || '').replace('https://doi.org/', '');
+    const link = w.doi || (w.primary_location && w.primary_location.landing_page_url) || w.id || '#';
+    return {
+      title: w.display_name || 'Nincs cím',
+      author,
+      year: w.publication_year ? String(w.publication_year) : '',
+      journal: sourceInfo.display_name || '',
+      citations: w.cited_by_count || 0,
+      link,
+      doi,
+      source: 'OpenAlex',
+    };
+  });
+}
+
+async function fetchSemanticScholar(topic, sort, count, yearFrom, yearTo) {
+  const params = new URLSearchParams({
+    query: topic,
+    limit: String(Math.min(count, 100)),
+    fields: 'title,year,authors,venue,citationCount,externalIds,url',
+  });
+  if (yearFrom || yearTo) params.set('year', `${yearFrom || ''}-${yearTo || ''}`);
+
+  const resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`);
+  if (!resp.ok) throw new Error(`Semantic Scholar hiba (${resp.status})`);
+  const data = await resp.json();
+
+  let results = (data.data || []).map(p => {
+    const authors = p.authors || [];
+    const doi = (p.externalIds && p.externalIds.DOI) || '';
+    const link = p.url || (doi ? `https://doi.org/${doi}` : '#');
+    return {
+      title: p.title || 'Nincs cím',
+      author: authors.length ? authors[0].name : 'N/A',
+      year: p.year ? String(p.year) : '',
+      journal: p.venue || '',
+      citations: p.citationCount || 0,
+      link,
+      doi,
+      source: 'Semantic Scholar',
+    };
+  });
+
+  if (sort === 'citations') results.sort((a, b) => b.citations - a.citations);
+  else if (sort === 'date') results.sort((a, b) => (b.year || '0').localeCompare(a.year || '0'));
+  return results;
+}
+
+function renderResults(items) {
+  resultsEl.innerHTML = '';
+  if (!items.length) {
+    resultsEl.innerHTML = '<div class="status">Nincs találat.</div>';
+    return;
+  }
+  for (const a of items) {
+    const div = document.createElement('div');
+    div.className = 'article';
+    const authorText = a.author + (a.journal ? ` &middot; ${a.journal}` : '');
+    div.innerHTML = `
+      <span class="badge">${a.source}</span>
+      <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
+      <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
+        &middot; <span class="citations">${a.citations} hivatkozás</span>
+      </div>
+    `;
+    resultsEl.appendChild(div);
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const topic = document.getElementById('topic').value.trim();
+  const yearFrom = parseInt(document.getElementById('yearFrom').value, 10) || null;
+  const yearTo = parseInt(document.getElementById('yearTo').value, 10) || null;
+  const sort = document.getElementById('sort').value;
+  const count = parseInt(document.getElementById('count').value, 10);
+
+  if (!topic) return;
+
+  searchBtn.disabled = true;
+  statusEl.textContent = 'Keresés folyamatban...';
+  resultsEl.innerHTML = '';
+
+  const [openAlexResult, s2Result] = await Promise.allSettled([
+    fetchOpenAlex(topic, sort, count, yearFrom, yearTo),
+    fetchSemanticScholar(topic, sort, count, yearFrom, yearTo),
+  ]);
+
+  const lists = [];
+  const errors = [];
+  if (openAlexResult.status === 'fulfilled') lists.push(openAlexResult.value);
+  else errors.push('OpenAlex: ' + openAlexResult.reason.message);
+  if (s2Result.status === 'fulfilled') lists.push(s2Result.value);
+  else errors.push('Semantic Scholar: ' + s2Result.reason.message);
+
+  let merged;
+  if (sort === 'relevance') {
+    merged = interleave(lists);
+  } else {
+    merged = lists.flat();
+    const key = sort === 'citations' ? 'citations' : 'year';
+    merged.sort((a, b) => sort === 'citations' ? b.citations - a.citations : (b.year || '0').localeCompare(a.year || '0'));
+  }
+
+  const results = dedupe(merged).slice(0, count);
+
+  statusEl.textContent = `${results.length} egyedi találat.` + (errors.length ? ' Hiba: ' + errors.join('; ') : '');
+  renderResults(results);
+  searchBtn.disabled = false;
+});
+</script>
+</body>
+</html>
