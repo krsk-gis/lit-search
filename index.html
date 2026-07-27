@@ -248,7 +248,11 @@ async function fetchScopus(topic, sort, count, yearFrom, yearTo) {
 
   const resp = await fetch(`/api/scopus?${params}`);
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.error || `Scopus proxy hiba (${resp.status})`);
+  if (!resp.ok) {
+    const base = data.error || `Scopus proxy hiba (${resp.status})`;
+    const detail = data.detail ? ` — ${String(data.detail).slice(0, 400)}` : '';
+    throw new Error(base + detail);
+  }
   return data.results || [];
 }
 
