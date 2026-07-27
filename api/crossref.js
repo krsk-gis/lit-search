@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 
   const sortMap = { relevance: "relevance", citations: "is-referenced-by-count", date: "published" };
   const params = new URLSearchParams({
-    query: topic,
+    "query.title": topic,
     rows: String(count),
     sort: sortMap[sort],
     order: "desc",
