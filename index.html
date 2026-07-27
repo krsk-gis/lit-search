@@ -97,6 +97,15 @@
     font-size: 0.8em;
   }
   footer { text-align: center; color: var(--muted); font-size: 0.8em; margin-top: 40px; }
+  footer p { margin: 0 0 10px; }
+  footer .credit {
+    margin: 16px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--accent-dark);
+    letter-spacing: 0.02em;
+  }
 </style>
 </head>
 <body>
@@ -140,10 +149,8 @@
   <div class="results" id="results"></div>
 
   <footer>
-    Adatforrás: OpenAlex (közvetlenül a böngészőből) és Scopus (egy szerver-oldali
-    proxy function-ön keresztül, amely elrejti az API-kulcsot). A Semantic Scholar
-    innen kimaradt, mert az API-ja nem engedélyez közvetlen böngészős (CORS) hívást
-    &mdash; ahhoz a helyi CLI eszköz használható.
+    <p>Adatforrás: <strong>OpenAlex</strong> és <strong>Scopus</strong> &mdash; hivatkozáskor ezekre érdemes forrásként utalni.</p>
+    <p class="credit">✦ Powered by KRSK × Claude</p>
   </footer>
 </div>
 
