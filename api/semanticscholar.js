@@ -18,48 +18,61 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const count = Math.min(parseInt(countParam, 10) || 50, 100);
-
-  const params = new URLSearchParams({
-    query: topic,
-    limit: String(Math.min(count, 100)),
-    fields: "title,year,authors,venue,citationCount,externalIds,url",
-  });
-  if (yearFrom || yearTo) params.set("year", `${yearFrom || ""}-${yearTo || ""}`);
+  const count = Math.min(parseInt(countParam, 10) || 50, 200);
 
   const headers = {};
   if (process.env.SEMANTIC_SCHOLAR_API_KEY) headers["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
 
-  let resp;
-  try {
-    resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`, { headers });
-  } catch (e) {
-    res.status(502).json({ error: "Nem sikerült elérni a Semantic Scholar API-t.", detail: String(e) });
-    return;
-  }
+  // A Semantic Scholar /paper/search egy híváson belül max 100 találatot ad,
+  // ezért 200-ig offset alapú lapozással kérjük le a maradékot.
+  const results = [];
+  let offset = 0;
+  while (results.length < count) {
+    const params = new URLSearchParams({
+      query: topic,
+      limit: String(Math.min(count - results.length, 100)),
+      offset: String(offset),
+      fields: "title,year,authors,venue,citationCount,externalIds,url",
+    });
+    if (yearFrom || yearTo) params.set("year", `${yearFrom || ""}-${yearTo || ""}`);
 
-  if (!resp.ok) {
-    const detail = await resp.text();
-    res.status(resp.status).json({ error: `Semantic Scholar API hiba (${resp.status})`, detail });
-    return;
-  }
+    let resp;
+    try {
+      resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`, { headers });
+    } catch (e) {
+      res.status(502).json({ error: "Nem sikerült elérni a Semantic Scholar API-t.", detail: String(e) });
+      return;
+    }
 
-  const data = await resp.json();
-  let results = (data.data || []).map((p) => {
-    const authors = p.authors || [];
-    const doi = (p.externalIds && p.externalIds.DOI) || "";
-    const link = p.url || (doi ? `https://doi.org/${doi}` : "#");
-    return {
-      title: p.title || "Nincs cím",
-      author: authors.length ? authors[0].name : "N/A",
-      year: p.year ? String(p.year) : "",
-      journal: p.venue || "",
-      citations: p.citationCount || 0,
-      link,
-      doi,
-      source: "Semantic Scholar",
-    };
-  });
+    if (!resp.ok) {
+      const detail = await resp.text();
+      res.status(resp.status).json({ error: `Semantic Scholar API hiba (${resp.status})`, detail });
+      return;
+    }
+
+    const data = await resp.json();
+    const items = data.data || [];
+    if (!items.length) break;
+
+    for (const p of items) {
+      const authors = p.authors || [];
+      const doi = (p.externalIds && p.externalIds.DOI) || "";
+      const link = p.url || (doi ? `https://doi.org/${doi}` : "#");
+      results.push({
+        title: p.title || "Nincs cím",
+        author: authors.length ? authors[0].name : "N/A",
+        year: p.year ? String(p.year) : "",
+        journal: p.venue || "",
+        citations: p.citationCount || 0,
+        link,
+        doi,
+        source: "Semantic Scholar",
+      });
+      if (results.length >= count) break;
+    }
+    offset += items.length;
+    if (items.length < 100) break;
+  }
 
   res.status(200).json({ results });
 };

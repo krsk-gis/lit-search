@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const count = Math.min(parseInt(countParam, 10) || 50, 100);
+  const count = Math.min(parseInt(countParam, 10) || 50, 200);
   const yearFrom = parseInt(yearFromParam, 10) || null;
   const yearTo = parseInt(yearToParam, 10) || null;
 

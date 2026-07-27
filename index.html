@@ -145,18 +145,14 @@
     <div class="field">
       <label for="sort">Rendezés</label>
       <select id="sort">
-        <option value="relevance">Alapértelmezett</option>
+        <option value="relevance">Relevancia</option>
         <option value="citations">Hivatkozások szerint</option>
         <option value="date">Dátum szerint</option>
       </select>
     </div>
-    <div class="field">
+    <div class="field year-field">
       <label for="count">Találatok</label>
-      <select id="count">
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-      </select>
+      <input id="count" type="number" min="1" max="200" step="1" value="50">
     </div>
     <button type="submit" id="searchBtn">Keresés</button>
   </form>
@@ -309,7 +305,7 @@ form.addEventListener('submit', async (e) => {
   const yearFrom = parseInt(document.getElementById('yearFrom').value, 10) || null;
   const yearTo = parseInt(document.getElementById('yearTo').value, 10) || null;
   const sort = document.getElementById('sort').value;
-  const count = parseInt(document.getElementById('count').value, 10);
+  const count = Math.min(Math.max(parseInt(document.getElementById('count').value, 10) || 50, 1), 200);
   const selectedSources = Object.keys(SOURCE_FETCHERS);
 
   if (!topic) return;
