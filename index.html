@@ -89,6 +89,7 @@
   .article a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 1.02em; }
   .article a:hover { text-decoration: underline; color: var(--accent); }
   .meta { color: var(--muted); font-size: 0.85em; margin-top: 6px; }
+  .doi { color: var(--muted); font-size: 0.72em; margin-top: 4px; opacity: 0.75; }
   .badge {
     display: inline-block;
     font-size: 0.75em;
@@ -299,6 +300,7 @@ function renderResults(items) {
       <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
         &middot; <span class="citations">${a.citations} hivatkozás</span>
       </div>
+      ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
     `;
     resultsEl.appendChild(div);
   }
