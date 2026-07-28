@@ -3,7 +3,22 @@
 // CORS fejlécet, így böngészőből közvetlenül nem hívható. A SEMANTIC_SCHOLAR_API_KEY
 // opcionális - ha be van állítva (Vercel Environment Variables), magasabb
 // rate limitet kapunk, ha nincs, a kulcs nélküli (erősen korlátozott)
-// publikus keretet használja az API.
+// publikus keretet használja az API. A rate limit még kulccsal is szigorú
+// (kb. 1 kérés/másodperc), ezért a lapozó kérések között várunk, és egy
+// esetleges 429-et is újrapróbálunk.
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchPage(url, headers) {
+  let resp = await fetch(url, { headers });
+  if (resp.status === 429) {
+    await sleep(1200);
+    resp = await fetch(url, { headers });
+  }
+  return resp;
+}
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -24,10 +39,15 @@ module.exports = async (req, res) => {
   if (process.env.SEMANTIC_SCHOLAR_API_KEY) headers["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
 
   // A Semantic Scholar /paper/search egy híváson belül max 100 találatot ad,
-  // ezért 200-ig offset alapú lapozással kérjük le a maradékot.
+  // ezért 200-ig offset alapú lapozással kérjük le a maradékot, a kérések
+  // között egy kis szünettel, hogy ne fussunk bele a másodpercenkénti limitbe.
   const results = [];
   let offset = 0;
+  let first = true;
   while (results.length < count) {
+    if (!first) await sleep(1100);
+    first = false;
+
     const params = new URLSearchParams({
       query: topic,
       limit: String(Math.min(count - results.length, 100)),
@@ -38,7 +58,7 @@ module.exports = async (req, res) => {
 
     let resp;
     try {
-      resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`, { headers });
+      resp = await fetchPage(`https://api.semanticscholar.org/graph/v1/paper/search?${params}`, headers);
     } catch (e) {
       res.status(502).json({ error: "Nem sikerült elérni a Semantic Scholar API-t.", detail: String(e) });
       return;
