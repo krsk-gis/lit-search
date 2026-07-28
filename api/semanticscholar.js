@@ -12,9 +12,15 @@ function sleep(ms) {
 }
 
 async function fetchPage(url, headers) {
+  // A kulcsos limit is csak 1 kérés/mp, endpointokon átívelően összesítve -
+  // ez nagyon szűk tartalék, ezért egyre hosszabb várakozással kétszer is
+  // újrapróbáljuk, mielőtt feladnánk. A várakozás összesen legyen a Vercel
+  // function időkorláton belül (ne fusson bele egy 504-be).
+  const delays = [1500, 2500];
   let resp = await fetch(url, { headers });
-  if (resp.status === 429) {
-    await sleep(1200);
+  for (const delay of delays) {
+    if (resp.status !== 429) break;
+    await sleep(delay);
     resp = await fetch(url, { headers });
   }
   return resp;
