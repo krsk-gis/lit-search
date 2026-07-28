@@ -66,7 +66,8 @@ module.exports = async (req, res) => {
 
     if (!resp.ok) {
       const detail = await resp.text();
-      res.status(resp.status).json({ error: `Semantic Scholar API hiba (${resp.status})`, detail });
+      const keyState = process.env.SEMANTIC_SCHOLAR_API_KEY ? "kulcs beállítva" : "NINCS kulcs beállítva";
+      res.status(resp.status).json({ error: `Semantic Scholar API hiba (${resp.status}) [${keyState}]`, detail });
       return;
     }
 
