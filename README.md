@@ -1,4 +1,4 @@
-# lit-search (v2.4.1)
+# lit-search (v2.5)
 
 Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat és/vagy egy szerzőt,
 és relevancia, hivatkozásszám vagy dátum szerint rendezve visszaadja a
@@ -22,7 +22,17 @@ legjobb (max. 200) találatot négy adatbázisból egyszerre - **OpenAlex**,
   találatok kerüljenek exportálásra (alapból mind ki van jelölve), majd egy
   kattintással fájlba menthetők (kliens-oldalon generálva). A CSV
   pontosvesszővel tagolt és UTF-8 BOM-mal kezdődik, hogy magyar Excelben is
-  helyesen (ékezetekkel, oszlopokra bontva) nyíljon meg.
+  helyesen (ékezetekkel, oszlopokra bontva) nyíljon meg. (A kapcsolódó
+  cikkek - lásd lent - nincsenek benne az exportban, csak a fő találati
+  lista.)
+- **Hivatkozási háló ("hólabda-módszer")**: DOI-val rendelkező találatoknál
+  két link - "Hivatkozik" (mit idéz a cikk) és "Hivatkozzák" (mi idézi azt) -
+  egy beágyazott panelben megjeleníti a kapcsolódó cikkeket, ugyanabban a
+  kártya-stílusban. A panel maga is tovább nyitható, így tetszőleges
+  mélységig lehet a kapcsolódó irodalmat bejárni. Adatforrás: Semantic
+  Scholar DOI-alapú `/references` és `/citations` végpontja
+  (`api/citations.js`) - erre csak a Semantic Scholarnak van tiszta,
+  dedikált API-ja a négy forrás közül.
 
 - **OpenAlex** és **Crossref**: nyilvános, kulcs nélkül hívható API-k.
 - **Scopus**: az `X-ELS-APIKey` titkos, ezért nem kerülhet a böngészőbe. Az
