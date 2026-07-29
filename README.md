@@ -1,4 +1,4 @@
-# lit-search (v2.0)
+# lit-search (v2.1)
 
 Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat, és relevancia,
 hivatkozásszám vagy dátum szerint rendezve visszaadja a legjobb (max. 200)
@@ -10,9 +10,9 @@ deduplikáció).
   van szabadon elérhető teljes szöveg, egy zöld "Nyílt hozzáférés" jelölés
   linkel rá. A Scopus és a Crossref nem ad megbízható per-cikk OA jelzést,
   ott ez nem jelenik meg.
-- **BibTeX / RIS export**: a találati lista a "BibTeX letöltése" / "RIS
-  letöltése" gombbal fájlba menthető (kliens-oldalon generálva, a már
-  lekért adatokból).
+- **BibTeX export**: jelölőnégyzettel kiválasztható, mely találatok
+  kerüljenek exportálásra (alapból mind ki van jelölve), majd egy
+  kattintással `.bib` fájlba menthetők (kliens-oldalon generálva).
 
 - **OpenAlex** és **Crossref**: nyilvános, kulcs nélkül hívható API-k.
 - **Scopus**: az `X-ELS-APIKey` titkos, ezért nem kerülhet a böngészőbe. Az
