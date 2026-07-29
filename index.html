@@ -168,7 +168,7 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.2</span>
+    <span class="version">v2.3</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
@@ -178,7 +178,7 @@
     <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
     <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
       átrendezheted hivatkozásszám vagy dátum szerint is.</li>
-    <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX fájlba exportálható.</li>
+    <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX vagy Excel (CSV) fájlba exportálható.</li>
   </ul>
 
   <form id="searchForm">
@@ -213,6 +213,7 @@
   <div class="export-bar" id="exportBar">
     <label class="select-all"><input type="checkbox" id="selectAll" checked> Mind kijelöl</label>
     <button type="button" id="exportBibtex">Kijelöltek exportálása (BibTeX)</button>
+    <button type="button" id="exportExcel">Kijelöltek exportálása (Excel)</button>
   </div>
   <div class="results" id="results"></div>
 
@@ -410,10 +411,38 @@ function toBibTeX(items) {
   return entries.join('\n\n') + '\n';
 }
 
+function csvCell(value) {
+  const s = String(value == null ? '' : value);
+  return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function toCSV(items) {
+  const headers = ['Forrás', 'Cím', 'Szerzők', 'Év', 'Folyóirat', 'Hivatkozások', 'DOI', 'Link', 'Nyílt hozzáférés'];
+  const rows = items.map(item => [
+    item.source,
+    item.title,
+    itemAuthors(item).join('; '),
+    item.year,
+    item.journal,
+    item.citations,
+    item.doi,
+    item.link,
+    item.isOA && item.oaUrl ? item.oaUrl : '',
+  ]);
+  const lines = [headers, ...rows].map(row => row.map(csvCell).join(';'));
+  return '\uFEFF' + lines.join('\r\n') + '\r\n';
+}
+
 document.getElementById('exportBibtex').addEventListener('click', () => {
   const selected = selectedResults();
   if (!selected.length) return;
   downloadFile(toBibTeX(selected), 'lit-search.bib', 'application/x-bibtex');
+});
+
+document.getElementById('exportExcel').addEventListener('click', () => {
+  const selected = selectedResults();
+  if (!selected.length) return;
+  downloadFile(toCSV(selected), 'lit-search.csv', 'text/csv;charset=utf-8');
 });
 
 document.getElementById('selectAll').addEventListener('change', (e) => {
