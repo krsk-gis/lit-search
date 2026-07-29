@@ -83,6 +83,8 @@ module.exports = async (req, res) => {
         citations: parseInt(item["citedby-count"] || "0", 10),
         link: (linkObj && linkObj["@href"]) || (doi ? `https://doi.org/${doi}` : "#"),
         doi,
+        isOA: false,
+        oaUrl: null,
         source: "Scopus",
       });
       if (results.length >= count) break;

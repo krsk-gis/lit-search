@@ -101,6 +101,32 @@
     font-weight: bold;
     font-size: 0.8em;
   }
+  .oa-badge {
+    display: inline-block;
+    background: #eaf7ec;
+    color: #2e7d32;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8em;
+    text-decoration: none;
+  }
+  .oa-badge:hover { text-decoration: underline; }
+  .export-bar {
+    display: none;
+    justify-content: center;
+    gap: 10px;
+    margin: -8px 0 20px;
+  }
+  .export-bar button {
+    background: var(--card);
+    color: var(--accent-dark);
+    border: 1px solid var(--border);
+    font-size: 0.85em;
+    padding: 6px 14px;
+    font-weight: 600;
+  }
+  .export-bar button:hover { background: var(--tag-bg); }
   footer { text-align: center; color: var(--muted); font-size: 0.8em; margin-top: 40px; }
   footer p { margin: 0 0 10px; }
   footer .credit {
@@ -117,7 +143,7 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v1.5.1</span>
+    <span class="version">v2.0</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
@@ -158,6 +184,10 @@
   </form>
 
   <div class="status" id="status"></div>
+  <div class="export-bar" id="exportBar">
+    <button type="button" id="exportBibtex">BibTeX letöltése</button>
+    <button type="button" id="exportRis">RIS letöltése</button>
+  </div>
   <div class="results" id="results"></div>
 
   <footer>
@@ -171,6 +201,8 @@ const form = document.getElementById('searchForm');
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
 const searchBtn = document.getElementById('searchBtn');
+const exportBar = document.getElementById('exportBar');
+let lastResults = [];
 
 function normalizeTitle(t) {
   return (t || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -226,18 +258,22 @@ async function fetchOpenAlex(topic, count, yearFrom, yearTo) {
 
   return (data.results || []).map(w => {
     const authorships = w.authorships || [];
-    const author = authorships.length ? authorships[0].author.display_name : 'N/A';
+    const authors = authorships.map(a => a.author && a.author.display_name).filter(Boolean);
     const sourceInfo = (w.primary_location && w.primary_location.source) || {};
     const doi = (w.doi || '').replace('https://doi.org/', '');
     const link = w.doi || (w.primary_location && w.primary_location.landing_page_url) || w.id || '#';
+    const oa = w.open_access || {};
     return {
       title: w.display_name || 'Nincs cím',
-      author,
+      author: authors.length ? authors[0] : 'N/A',
+      authors,
       year: w.publication_year ? String(w.publication_year) : '',
       journal: sourceInfo.display_name || '',
       citations: w.cited_by_count || 0,
       link,
       doi,
+      isOA: !!oa.is_oa,
+      oaUrl: oa.oa_url || null,
       source: 'OpenAlex',
     };
   });
@@ -285,12 +321,84 @@ function renderResults(items) {
       <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
       <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
         &middot; <span class="citations">${a.citations} hivatkozás</span>
+        ${a.isOA && a.oaUrl ? `&middot; <a class="oa-badge" href="${a.oaUrl}" target="_blank" rel="noopener">🔓 Nyílt hozzáférés</a>` : ''}
       </div>
       ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
     `;
     resultsEl.appendChild(div);
   }
 }
+
+function itemAuthors(item) {
+  const list = (item.authors && item.authors.length ? item.authors : [item.author]).filter(Boolean);
+  return list.length ? list : ['N/A'];
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function toBibTeX(items) {
+  const usedKeys = new Set();
+  const entries = items.map(item => {
+    const authors = itemAuthors(item);
+    const surname = (authors[0] || 'ref').trim().split(/\s+/).pop().toLowerCase().replace(/[^a-z]/g, '') || 'ref';
+    const year = item.year || 'nd';
+    let key = `${surname}${year}`;
+    let suffix = 0;
+    while (usedKeys.has(key)) {
+      suffix += 1;
+      key = `${surname}${year}${String.fromCharCode(96 + suffix)}`;
+    }
+    usedKeys.add(key);
+
+    const clean = (s) => String(s || '').replace(/[{}]/g, '');
+    const fields = [
+      ['title', clean(item.title)],
+      ['author', authors.map(clean).join(' and ')],
+      ['year', clean(item.year)],
+      ['journal', clean(item.journal)],
+      ['doi', clean(item.doi)],
+      ['url', clean(item.link)],
+    ].filter(([, v]) => v);
+
+    const body = fields.map(([k, v]) => `  ${k} = {${v}}`).join(',\n');
+    return `@article{${key},\n${body}\n}`;
+  });
+  return entries.join('\n\n') + '\n';
+}
+
+function toRIS(items) {
+  const entries = items.map(item => {
+    const lines = ['TY  - JOUR', `TI  - ${item.title || ''}`];
+    itemAuthors(item).forEach(a => lines.push(`AU  - ${a}`));
+    if (item.year) lines.push(`PY  - ${item.year}`);
+    if (item.journal) lines.push(`JO  - ${item.journal}`);
+    if (item.doi) lines.push(`DO  - ${item.doi}`);
+    if (item.link) lines.push(`UR  - ${item.link}`);
+    lines.push('ER  - ');
+    return lines.join('\n');
+  });
+  return entries.join('\n\n') + '\n';
+}
+
+document.getElementById('exportBibtex').addEventListener('click', () => {
+  if (!lastResults.length) return;
+  downloadFile(toBibTeX(lastResults), 'lit-search.bib', 'application/x-bibtex');
+});
+
+document.getElementById('exportRis').addEventListener('click', () => {
+  if (!lastResults.length) return;
+  downloadFile(toRIS(lastResults), 'lit-search.ris', 'application/x-research-info-systems');
+});
 
 const SOURCE_FETCHERS = {
   openalex: { label: 'OpenAlex', fetch: fetchOpenAlex },
@@ -313,6 +421,7 @@ form.addEventListener('submit', async (e) => {
   searchBtn.disabled = true;
   statusEl.textContent = 'Keresés folyamatban...';
   resultsEl.innerHTML = '';
+  exportBar.style.display = 'none';
 
   const settled = await Promise.allSettled(
     selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, count, yearFrom, yearTo))
@@ -336,6 +445,8 @@ form.addEventListener('submit', async (e) => {
 
   statusEl.textContent = `${results.length} egyedi találat.` + (errors.length ? ' Hiba: ' + errors.join('; ') : '');
   renderResults(results);
+  lastResults = results;
+  exportBar.style.display = results.length ? 'flex' : 'none';
   searchBtn.disabled = false;
 });
 </script>

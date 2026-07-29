@@ -48,20 +48,24 @@ module.exports = async (req, res) => {
   const items = (data.message && data.message.items) || [];
 
   const results = items.map((item) => {
-    const author = (item.author || [])[0];
-    const authorName = author ? `${author.given || ""} ${author.family || ""}`.trim() : "N/A";
+    const authors = (item.author || [])
+      .map((a) => `${a.given || ""} ${a.family || ""}`.trim())
+      .filter(Boolean);
     const year = item.published && item.published["date-parts"] && item.published["date-parts"][0]
       ? String(item.published["date-parts"][0][0])
       : "";
     const doi = item.DOI || "";
     return {
       title: (item.title && item.title[0]) || "Nincs cím",
-      author: authorName || "N/A",
+      author: authors.length ? authors[0] : "N/A",
+      authors,
       year,
       journal: (item["container-title"] && item["container-title"][0]) || "",
       citations: item["is-referenced-by-count"] || 0,
       link: item.URL || (doi ? `https://doi.org/${doi}` : "#"),
       doi,
+      isOA: false,
+      oaUrl: null,
       source: "Crossref",
     };
   });

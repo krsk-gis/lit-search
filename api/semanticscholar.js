@@ -58,7 +58,7 @@ module.exports = async (req, res) => {
       query: topic,
       limit: String(Math.min(count - results.length, 100)),
       offset: String(offset),
-      fields: "title,year,authors,venue,citationCount,externalIds,url",
+      fields: "title,year,authors,venue,citationCount,externalIds,url,openAccessPdf",
     });
     if (yearFrom || yearTo) params.set("year", `${yearFrom || ""}-${yearTo || ""}`);
 
@@ -82,17 +82,21 @@ module.exports = async (req, res) => {
     if (!items.length) break;
 
     for (const p of items) {
-      const authors = p.authors || [];
+      const authorNames = (p.authors || []).map((a) => a.name).filter(Boolean);
       const doi = (p.externalIds && p.externalIds.DOI) || "";
       const link = p.url || (doi ? `https://doi.org/${doi}` : "#");
+      const oaUrl = (p.openAccessPdf && p.openAccessPdf.url) || null;
       results.push({
         title: p.title || "Nincs cím",
-        author: authors.length ? authors[0].name : "N/A",
+        author: authorNames.length ? authorNames[0] : "N/A",
+        authors: authorNames,
         year: p.year ? String(p.year) : "",
         journal: p.venue || "",
         citations: p.citationCount || 0,
         link,
         doi,
+        isOA: !!oaUrl,
+        oaUrl,
         source: "Semantic Scholar",
       });
       if (results.length >= count) break;
