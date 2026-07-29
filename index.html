@@ -33,12 +33,26 @@
   .version { color: var(--muted); font-size: 0.65em; font-weight: 600; }
   .subtitle { text-align: center; color: var(--muted); margin-bottom: 4px; font-size: 0.95em; }
   .sources-note { text-align: center; color: var(--muted); margin-bottom: 10px; font-size: 0.8em; }
+  .how-it-works-details {
+    margin: 0 auto 24px;
+    max-width: 560px;
+  }
+  .how-it-works-details summary {
+    cursor: pointer;
+    text-align: center;
+    color: var(--accent-dark);
+    font-size: 0.85em;
+    font-weight: 600;
+    list-style: none;
+  }
+  .how-it-works-details summary::-webkit-details-marker { display: none; }
+  .how-it-works-details summary::after { content: " ▾"; }
+  .how-it-works-details[open] summary::after { content: " ▴"; }
   .how-it-works {
     color: var(--muted);
-    margin: 0 auto 24px;
+    margin: 8px 0 0;
     font-size: 0.78em;
     opacity: 0.9;
-    max-width: 560px;
     padding-left: 1.2em;
   }
   .how-it-works li { margin-bottom: 4px; }
@@ -189,22 +203,25 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.5</span>
+    <span class="version">v2.5.2</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
-  <ul class="how-it-works">
-    <li>Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — ezt egzakt kifejezésként
-      keresi a cím és az absztrakt mezőkben mind a négy adatbázisban.</li>
-    <li>Opcionálisan megadhatsz egy szerzőt is (önmagában, vagy a témával kombinálva) — a Semantic
-      Scholarnál ez csak a relevancia-számítást befolyásolja, nem garantált pontos szerző-szűrés.</li>
-    <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
-    <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
-      átrendezheted hivatkozásszám vagy dátum szerint is.</li>
-    <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX vagy Excel (CSV) fájlba exportálható.</li>
-    <li>DOI-val rendelkező találatoknál a "Hivatkozik" / "Hivatkozzák" linkekkel megnézheted, mit idéz a
-      cikk, illetve mi idézi azt (Semantic Scholar alapján) — a kapcsolódó cikkek is tovább nyithatók.</li>
-  </ul>
+  <details class="how-it-works-details">
+    <summary>Mire vagyok képes?</summary>
+    <ul class="how-it-works">
+      <li>Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — ezt egzakt kifejezésként
+        keresi a cím és az absztrakt mezőkben mind a négy adatbázisban.</li>
+      <li>Opcionálisan megadhatsz egy szerzőt is (önmagában, vagy a témával kombinálva) — a Semantic
+        Scholarnál ez csak a relevancia-számítást befolyásolja, nem garantált pontos szerző-szűrés.</li>
+      <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
+      <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
+        átrendezheted hivatkozásszám vagy dátum szerint is.</li>
+      <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX vagy Excel (CSV) fájlba exportálható.</li>
+      <li>DOI-val rendelkező találatoknál a "Hivatkozik" / "Hivatkozzák" linkekkel megnézheted, mit idéz a
+        cikk, illetve mi idézi azt (Semantic Scholar alapján) — a kapcsolódó cikkek is tovább nyithatók.</li>
+    </ul>
+  </details>
 
   <form id="searchForm">
     <div class="field topic-field">
