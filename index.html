@@ -168,16 +168,15 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.6</span>
+    <span class="version">v2.7</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
   <ul class="how-it-works">
     <li>Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — ezt egzakt kifejezésként
       keresi a cím és az absztrakt mezőkben mind a négy adatbázisban.</li>
-    <li>Opcionálisan megadhatsz egy szerzőt is (önmagában, vagy a témával kombinálva) — csak azok a
-      találatok jelennek meg, ahol valamelyik szerző vezetékneve egyezik, és a keresztnév/monogram is
-      egyezik (formátumtól, ékezettől és kis/nagybetűtől függetlenül).</li>
+    <li>Opcionálisan megadhatsz egy szerzőt is (önmagában, vagy a témával kombinálva) — a Semantic
+      Scholarnál ez csak a relevancia-számítást befolyásolja, nem garantált pontos szerző-szűrés.</li>
     <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
     <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
       átrendezheted hivatkozásszám vagy dátum szerint is.</li>
@@ -240,39 +239,6 @@ let lastResults = [];
 
 function normalizeTitle(t) {
   return (t || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
-
-function normalizeName(n) {
-  return String(n || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function nameTokens(n) {
-  return normalizeName(n).split(' ').filter(Boolean);
-}
-
-// Vezet\u00e9kn\u00e9v-egyez\u00e9s + keresztn\u00e9v/monogram kezd\u0151bet\u0171-egyez\u00e9s, n\u00e9vsorrendt\u0151l
-// f\u00fcggetlen\u00fcl. Ez az\u00e9rt kell, mert pl. a Scopus "Vezet\u00e9kn\u00e9v K." form\u00e1ban adja
-// a szerz\u0151t, ami sosem egyezne sz\u00f3 szerint a felhaszn\u00e1l\u00f3 "Keresztn\u00e9v
-// Vezet\u00e9kn\u00e9v" bevitel\u00e9vel - a vezet\u00e9knevet a leghosszabb tokenk\u00e9nt k\u00f6zel\u00edtj\u00fck.
-function namesMatch(query, candidate) {
-  const qTokens = nameTokens(query);
-  const cTokens = nameTokens(candidate);
-  if (!qTokens.length || !cTokens.length) return false;
-
-  const longest = (tokens) => tokens.reduce((a, b) => (b.length > a.length ? b : a));
-  const qSurname = longest(qTokens);
-  const cSurname = longest(cTokens);
-  if (qSurname !== cSurname) return false;
-
-  const qRest = qTokens.filter(t => t !== qSurname);
-  if (!qRest.length) return true;
-  const cRest = cTokens.filter(t => t !== cSurname);
-  return qRest.every(qt => cRest.some(ct => ct[0] === qt[0]));
 }
 
 function dedupe(items) {
@@ -535,16 +501,7 @@ form.addEventListener('submit', async (e) => {
   // Minden forrás relevancia (cím/absztrakt-egyezés) szerint ad vissza
   // találatokat - ez a lekérdezés alapja. A "Rendezés" ezen a már releváns
   // halmazon rendez át, nem befolyásolja, hogy mi kerül be a listába.
-  let merged = interleave(lists);
-
-  // Az egyes API-k szerző szerinti keresése forrásonként eltérően szigorú
-  // (van, ahol csak részleges/laza egyezés is talál) - ezért itt, kliens
-  // oldalon egységesen megköveteljük legalább egy szerzőnél a vezetéknév-
-  // egyezést (lásd namesMatch), ha meg lett adva szerző.
-  if (author) {
-    merged = merged.filter(item => itemAuthors(item).some(a => namesMatch(author, a)));
-  }
-
+  const merged = interleave(lists);
   const results = dedupe(merged).slice(0, count);
   if (sort === 'citations') results.sort((a, b) => b.citations - a.citations);
   else if (sort === 'date') results.sort((a, b) => (b.year || '0').localeCompare(a.year || '0'));
