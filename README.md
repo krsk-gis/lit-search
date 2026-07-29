@@ -1,4 +1,4 @@
-# lit-search (v2.6)
+# lit-search (v2.7)
 
 Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat és/vagy egy szerzőt,
 és relevancia, hivatkozásszám vagy dátum szerint rendezve visszaadja a
@@ -10,11 +10,10 @@ legjobb (max. 200) találatot négy adatbázisból egyszerre - **OpenAlex**,
   `AUTH()`, OpenAlexnél `raw_author_name.search`, Crossrefnél `query.author`
   szűkíti a lekérdezést; a Semantic Scholar publikus keresőjének nincs külön
   szerző-módja, ott a névvel együtt küldött általános kereséssel megyünk.
-  Mivel egyik forrás keresése sem garantáltan pontos, a végén kliens-oldalon
-  is kiszűrjük azokat a találatokat, ahol nincs a megadott névvel egyező
-  szerző - az egyezés vezetéknév-egyezés + keresztnév/monogram
-  kezdőbetű-egyezés, névsorrendtől és formátumtól függetlenül (pl. "Jane
-  Smith" megtalálja a "Smith J." formában szereplő szerzőt is).
+  Nincs kliens-oldali utószűrés - próbáltunk kettőt (szó szerinti teljes
+  névegyezés, majd vezetéknév+monogram egyezés), de mindkettő inkább kiszűrt
+  jó találatokat, mint javított a pontosságon, úgyhogy egyszerűen az egyes
+  API-k saját keresésére hagyatkozunk.
 - **Nyílt hozzáférés jelzés**: ha az OpenAlex vagy a Semantic Scholar szerint
   van szabadon elérhető teljes szöveg, egy "Nyílt hozzáférés" jelölés
   linkel rá. A Scopus és a Crossref nem ad megbízható per-cikk OA jelzést,
