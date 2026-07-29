@@ -1,18 +1,25 @@
-# lit-search (v2.1)
+# lit-search (v2.4)
 
-Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat, és relevancia,
-hivatkozásszám vagy dátum szerint rendezve visszaadja a legjobb (max. 200)
-találatot négy adatbázisból egyszerre - **OpenAlex**, **Scopus**,
-**Semantic Scholar**, **Crossref** -, egyedi listára szűrve (DOI/cím alapú
-deduplikáció).
+Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat és/vagy egy szerzőt,
+és relevancia, hivatkozásszám vagy dátum szerint rendezve visszaadja a
+legjobb (max. 200) találatot négy adatbázisból egyszerre - **OpenAlex**,
+**Scopus**, **Semantic Scholar**, **Crossref** -, egyedi listára szűrve
+(DOI/cím alapú deduplikáció).
 
+- **Szerző szerinti keresés**: önmagában vagy a témával kombinálva. Scopusnál
+  `AUTH()`, OpenAlexnél `raw_author_name.search`, Crossrefnél
+  `query.author` - mindhárom pontos szerző-szűrés. A Semantic Scholar
+  publikus keresőjének nincs külön szerző-módja, ott a szerző csak a
+  relevancia-számítást befolyásolja.
 - **Nyílt hozzáférés jelzés**: ha az OpenAlex vagy a Semantic Scholar szerint
-  van szabadon elérhető teljes szöveg, egy zöld "Nyílt hozzáférés" jelölés
+  van szabadon elérhető teljes szöveg, egy "Nyílt hozzáférés" jelölés
   linkel rá. A Scopus és a Crossref nem ad megbízható per-cikk OA jelzést,
   ott ez nem jelenik meg.
-- **BibTeX export**: jelölőnégyzettel kiválasztható, mely találatok
-  kerüljenek exportálásra (alapból mind ki van jelölve), majd egy
-  kattintással `.bib` fájlba menthetők (kliens-oldalon generálva).
+- **BibTeX / Excel (CSV) export**: jelölőnégyzettel kiválasztható, mely
+  találatok kerüljenek exportálásra (alapból mind ki van jelölve), majd egy
+  kattintással fájlba menthetők (kliens-oldalon generálva). A CSV
+  pontosvesszővel tagolt és UTF-8 BOM-mal kezdődik, hogy magyar Excelben is
+  helyesen (ékezetekkel, oszlopokra bontva) nyíljon meg.
 
 - **OpenAlex** és **Crossref**: nyilvános, kulcs nélkül hívható API-k.
 - **Scopus**: az `X-ELS-APIKey` titkos, ezért nem kerülhet a böngészőbe. Az
