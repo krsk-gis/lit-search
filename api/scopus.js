@@ -3,12 +3,15 @@
 // soha nem kerül a kliens (böngésző) oldalra - csak ez a function ismeri,
 // a Vercel projekt titkos környezeti változójaként tárolva.
 
-function buildQuery(topic, raw, yearFrom, yearTo) {
-  const phrase = String(topic).replace(/"/g, "");
-  let query = raw ? topic : `TITLE-ABS-KEY("${phrase}")`;
-  if (yearFrom) query += ` AND PUBYEAR > ${yearFrom - 1}`;
-  if (yearTo) query += ` AND PUBYEAR < ${yearTo + 1}`;
-  return query;
+function buildQuery(topic, author, raw, yearFrom, yearTo) {
+  if (raw) return topic;
+
+  const clauses = [];
+  if (topic) clauses.push(`TITLE-ABS-KEY("${String(topic).replace(/"/g, "")}")`);
+  if (author) clauses.push(`AUTH("${String(author).replace(/"/g, "")}")`);
+  if (yearFrom) clauses.push(`PUBYEAR > ${yearFrom - 1}`);
+  if (yearTo) clauses.push(`PUBYEAR < ${yearTo + 1}`);
+  return clauses.join(" AND ");
 }
 
 module.exports = async (req, res) => {
@@ -18,11 +21,11 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { topic, count: countParam, yearFrom: yearFromParam, yearTo: yearToParam } = req.query;
+  const { topic, author, count: countParam, yearFrom: yearFromParam, yearTo: yearToParam } = req.query;
   const raw = req.query.raw === "1";
 
-  if (!topic) {
-    res.status(400).json({ error: 'Hiányzó "topic" paraméter.' });
+  if (!topic && !author) {
+    res.status(400).json({ error: 'Hiányzó "topic" vagy "author" paraméter.' });
     return;
   }
 
@@ -40,7 +43,7 @@ module.exports = async (req, res) => {
   // "relevancy"-t küldünk - -coverDate az egyetlen igazoltan működő érték,
   // ezt használjuk mindig; a hivatkozás/dátum szerinti rendezést a kliens
   // végzi a már lekért találatokon.
-  const query = buildQuery(topic, raw, yearFrom, yearTo);
+  const query = buildQuery(topic, author, raw, yearFrom, yearTo);
 
   const results = [];
   let start = 0;

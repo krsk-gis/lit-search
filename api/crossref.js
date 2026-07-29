@@ -10,20 +10,21 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { topic, count: countParam, yearFrom, yearTo } = req.query;
-  if (!topic) {
-    res.status(400).json({ error: 'Hiányzó "topic" paraméter.' });
+  const { topic, author, count: countParam, yearFrom, yearTo } = req.query;
+  if (!topic && !author) {
+    res.status(400).json({ error: 'Hiányzó "topic" vagy "author" paraméter.' });
     return;
   }
 
   const count = Math.min(parseInt(countParam, 10) || 50, 200);
 
   const params = new URLSearchParams({
-    "query.title": topic,
     rows: String(count),
     sort: "relevance",
     select: "title,author,published,container-title,is-referenced-by-count,DOI,URL",
   });
+  if (topic) params.set("query.title", topic);
+  if (author) params.set("query.author", author);
 
   const filters = [];
   if (yearFrom) filters.push(`from-pub-date:${yearFrom}-01-01`);

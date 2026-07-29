@@ -168,13 +168,15 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.3</span>
+    <span class="version">v2.4</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
   <ul class="how-it-works">
     <li>Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — ezt egzakt kifejezésként
       keresi a cím és az absztrakt mezőkben mind a négy adatbázisban.</li>
+    <li>Opcionálisan megadhatsz egy szerzőt is (önmagában, vagy a témával kombinálva) — a Semantic
+      Scholarnál ez csak a relevancia-számítást befolyásolja, nem garantált pontos szerző-szűrés.</li>
     <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
     <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
       átrendezheted hivatkozásszám vagy dátum szerint is.</li>
@@ -184,7 +186,11 @@
   <form id="searchForm">
     <div class="field topic-field">
       <label for="topic">Téma / kulcsszavak</label>
-      <input id="topic" type="text" placeholder='pl. "urban development" AND GIS' required>
+      <input id="topic" type="text" placeholder='pl. "urban development" AND GIS'>
+    </div>
+    <div class="field topic-field">
+      <label for="author">Szerző</label>
+      <input id="author" type="text" placeholder="pl. Jane Smith">
     </div>
     <div class="field year-field">
       <label for="yearFrom">Évtől</label>
@@ -268,9 +274,10 @@ function interleave(lists) {
   return out;
 }
 
-async function fetchOpenAlex(topic, count, yearFrom, yearTo) {
-  const phrase = topic.replace(/"/g, '');
-  const filters = [`title_and_abstract.search:"${phrase}"`];
+async function fetchOpenAlex(topic, author, count, yearFrom, yearTo) {
+  const filters = [];
+  if (topic) filters.push(`title_and_abstract.search:"${topic.replace(/"/g, '')}"`);
+  if (author) filters.push(`raw_author_name.search:"${author.replace(/"/g, '')}"`);
   if (yearFrom) filters.push(`publication_year:>${yearFrom - 1}`);
   if (yearTo) filters.push(`publication_year:<${yearTo + 1}`);
   const params = new URLSearchParams({
@@ -306,8 +313,10 @@ async function fetchOpenAlex(topic, count, yearFrom, yearTo) {
   });
 }
 
-async function fetchProxy(endpoint, label, topic, count, yearFrom, yearTo) {
-  const params = new URLSearchParams({ topic, count: String(count) });
+async function fetchProxy(endpoint, label, topic, author, count, yearFrom, yearTo) {
+  const params = new URLSearchParams({ count: String(count) });
+  if (topic) params.set('topic', topic);
+  if (author) params.set('author', author);
   if (yearFrom) params.set('yearFrom', String(yearFrom));
   if (yearTo) params.set('yearTo', String(yearTo));
 
@@ -321,16 +330,16 @@ async function fetchProxy(endpoint, label, topic, count, yearFrom, yearTo) {
   return data.results || [];
 }
 
-function fetchScopus(topic, count, yearFrom, yearTo) {
-  return fetchProxy('/api/scopus', 'Scopus', topic, count, yearFrom, yearTo);
+function fetchScopus(topic, author, count, yearFrom, yearTo) {
+  return fetchProxy('/api/scopus', 'Scopus', topic, author, count, yearFrom, yearTo);
 }
 
-function fetchSemanticScholar(topic, count, yearFrom, yearTo) {
-  return fetchProxy('/api/semanticscholar', 'Semantic Scholar', topic, count, yearFrom, yearTo);
+function fetchSemanticScholar(topic, author, count, yearFrom, yearTo) {
+  return fetchProxy('/api/semanticscholar', 'Semantic Scholar', topic, author, count, yearFrom, yearTo);
 }
 
-function fetchCrossref(topic, count, yearFrom, yearTo) {
-  return fetchProxy('/api/crossref', 'Crossref', topic, count, yearFrom, yearTo);
+function fetchCrossref(topic, author, count, yearFrom, yearTo) {
+  return fetchProxy('/api/crossref', 'Crossref', topic, author, count, yearFrom, yearTo);
 }
 
 function renderResults(items) {
@@ -459,13 +468,17 @@ const SOURCE_FETCHERS = {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const topic = document.getElementById('topic').value.trim();
+  const author = document.getElementById('author').value.trim();
   const yearFrom = parseInt(document.getElementById('yearFrom').value, 10) || null;
   const yearTo = parseInt(document.getElementById('yearTo').value, 10) || null;
   const sort = document.getElementById('sort').value;
   const count = Math.min(Math.max(parseInt(document.getElementById('count').value, 10) || 50, 1), 200);
   const selectedSources = Object.keys(SOURCE_FETCHERS);
 
-  if (!topic) return;
+  if (!topic && !author) {
+    statusEl.textContent = 'Adj meg egy témát és/vagy egy szerzőt.';
+    return;
+  }
 
   searchBtn.disabled = true;
   statusEl.textContent = 'Keresés folyamatban...';
@@ -474,7 +487,7 @@ form.addEventListener('submit', async (e) => {
   document.getElementById('selectAll').checked = true;
 
   const settled = await Promise.allSettled(
-    selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, count, yearFrom, yearTo))
+    selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, author, count, yearFrom, yearTo))
   );
 
   const lists = [];

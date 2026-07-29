@@ -34,12 +34,17 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { topic, count: countParam, yearFrom, yearTo } = req.query;
-  if (!topic) {
-    res.status(400).json({ error: 'Hiányzó "topic" paraméter.' });
+  const { topic, author, count: countParam, yearFrom, yearTo } = req.query;
+  if (!topic && !author) {
+    res.status(400).json({ error: 'Hiányzó "topic" vagy "author" paraméter.' });
     return;
   }
 
+  // A publikus /paper/search végpontnak nincs külön szerző-szűkített módja,
+  // csak egy általános relevancia-keresés van - a szerzőt a témával együtt
+  // adjuk át benne, ez befolyásolja a relevanciát, de nem garantált pontos
+  // szerző szerinti szűrés.
+  const query = [topic, author].filter(Boolean).join(" ");
   const count = Math.min(parseInt(countParam, 10) || 50, 200);
 
   const headers = {};
@@ -56,7 +61,7 @@ module.exports = async (req, res) => {
     first = false;
 
     const params = new URLSearchParams({
-      query: topic,
+      query,
       limit: String(Math.min(count - results.length, 100)),
       offset: String(offset),
       fields: "title,year,authors,venue,citationCount,externalIds,url,openAccessPdf",
