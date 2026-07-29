@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/semanticscholar.js": {
+      "maxDuration": 30
+    }
+  }
+}

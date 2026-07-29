@@ -32,7 +32,15 @@
   .version { color: var(--muted); font-size: 0.65em; font-weight: 600; }
   .subtitle { text-align: center; color: var(--muted); margin-bottom: 4px; font-size: 0.95em; }
   .sources-note { text-align: center; color: var(--muted); margin-bottom: 10px; font-size: 0.8em; }
-  .how-it-works { text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 0.75em; opacity: 0.85; }
+  .how-it-works {
+    color: var(--muted);
+    margin: 0 auto 24px;
+    font-size: 0.78em;
+    opacity: 0.9;
+    max-width: 560px;
+    padding-left: 1.2em;
+  }
+  .how-it-works li { margin-bottom: 4px; }
 
   form {
     background: var(--card);
@@ -103,20 +111,19 @@
   }
   .oa-badge {
     display: inline-block;
-    background: #eaf7ec;
-    color: #2e7d32;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.8em;
+    color: #4a7c52;
+    font-size: 0.75em;
     text-decoration: none;
+    opacity: 0.85;
   }
   .oa-badge:hover { text-decoration: underline; }
   .export-bar {
     display: none;
+    align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 16px;
     margin: -8px 0 20px;
+    flex-wrap: wrap;
   }
   .export-bar button {
     background: var(--card);
@@ -127,6 +134,22 @@
     font-weight: 600;
   }
   .export-bar button:hover { background: var(--tag-bg); }
+  .select-all {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85em;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .select-all input, .article-select {
+    accent-color: var(--accent-dark);
+    width: 15px;
+    height: 15px;
+  }
+  .article { display: flex; gap: 10px; }
+  .article-select { margin-top: 3px; flex-shrink: 0; }
+  .article-body { flex: 1; min-width: 0; }
   footer { text-align: center; color: var(--muted); font-size: 0.8em; margin-top: 40px; }
   footer p { margin: 0 0 10px; }
   footer .credit {
@@ -143,17 +166,18 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.0</span>
+    <span class="version">v2.1</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
-  <div class="how-it-works">
-    Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — a rendszer ezt egzakt
-    kifejezésként keresi a cím és az absztrakt mezőkben mind a négy adatbázisban, majd a találatokat
-    összefésüli és szűri a duplikátumokat. A találatok alapból relevancia szerint jelennek meg;
-    ezen belül szűkítheted évtartományra, és igény szerint átrendezheted hivatkozásszám vagy dátum
-    szerint is.
-  </div>
+  <ul class="how-it-works">
+    <li>Írj be egy témát vagy kulcsszavakat (pl. <em>urban development</em>) — ezt egzakt kifejezésként
+      keresi a cím és az absztrakt mezőkben mind a négy adatbázisban.</li>
+    <li>A találatokat összefésüli és kiszűri a duplikátumokat.</li>
+    <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
+      átrendezheted hivatkozásszám vagy dátum szerint is.</li>
+    <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX fájlba exportálható.</li>
+  </ul>
 
   <form id="searchForm">
     <div class="field topic-field">
@@ -185,8 +209,8 @@
 
   <div class="status" id="status"></div>
   <div class="export-bar" id="exportBar">
-    <button type="button" id="exportBibtex">BibTeX letöltése</button>
-    <button type="button" id="exportRis">RIS letöltése</button>
+    <label class="select-all"><input type="checkbox" id="selectAll" checked> Mind kijelöl</label>
+    <button type="button" id="exportBibtex">Kijelöltek exportálása (BibTeX)</button>
   </div>
   <div class="results" id="results"></div>
 
@@ -312,21 +336,29 @@ function renderResults(items) {
     resultsEl.innerHTML = '<div class="status">Nincs találat.</div>';
     return;
   }
-  for (const a of items) {
+  items.forEach((a, i) => {
     const div = document.createElement('div');
     div.className = 'article';
     const authorText = a.author + (a.journal ? ` &middot; ${a.journal}` : '');
     div.innerHTML = `
-      <span class="badge">${a.source}</span>
-      <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
-      <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
-        &middot; <span class="citations">${a.citations} hivatkozás</span>
-        ${a.isOA && a.oaUrl ? `&middot; <a class="oa-badge" href="${a.oaUrl}" target="_blank" rel="noopener">🔓 Nyílt hozzáférés</a>` : ''}
+      <input type="checkbox" class="article-select" data-index="${i}" checked>
+      <div class="article-body">
+        <span class="badge">${a.source}</span>
+        <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
+        <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
+          &middot; <span class="citations">${a.citations} hivatkozás</span>
+          ${a.isOA && a.oaUrl ? `&middot; <a class="oa-badge" href="${a.oaUrl}" target="_blank" rel="noopener">🔓 nyílt hozzáférés</a>` : ''}
+        </div>
+        ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
       </div>
-      ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
     `;
     resultsEl.appendChild(div);
-  }
+  });
+}
+
+function selectedResults() {
+  const checked = Array.from(document.querySelectorAll('.article-select:checked'));
+  return checked.map(c => lastResults[parseInt(c.dataset.index, 10)]);
 }
 
 function itemAuthors(item) {
@@ -376,28 +408,14 @@ function toBibTeX(items) {
   return entries.join('\n\n') + '\n';
 }
 
-function toRIS(items) {
-  const entries = items.map(item => {
-    const lines = ['TY  - JOUR', `TI  - ${item.title || ''}`];
-    itemAuthors(item).forEach(a => lines.push(`AU  - ${a}`));
-    if (item.year) lines.push(`PY  - ${item.year}`);
-    if (item.journal) lines.push(`JO  - ${item.journal}`);
-    if (item.doi) lines.push(`DO  - ${item.doi}`);
-    if (item.link) lines.push(`UR  - ${item.link}`);
-    lines.push('ER  - ');
-    return lines.join('\n');
-  });
-  return entries.join('\n\n') + '\n';
-}
-
 document.getElementById('exportBibtex').addEventListener('click', () => {
-  if (!lastResults.length) return;
-  downloadFile(toBibTeX(lastResults), 'lit-search.bib', 'application/x-bibtex');
+  const selected = selectedResults();
+  if (!selected.length) return;
+  downloadFile(toBibTeX(selected), 'lit-search.bib', 'application/x-bibtex');
 });
 
-document.getElementById('exportRis').addEventListener('click', () => {
-  if (!lastResults.length) return;
-  downloadFile(toRIS(lastResults), 'lit-search.ris', 'application/x-research-info-systems');
+document.getElementById('selectAll').addEventListener('change', (e) => {
+  document.querySelectorAll('.article-select').forEach(c => { c.checked = e.target.checked; });
 });
 
 const SOURCE_FETCHERS = {
@@ -422,6 +440,7 @@ form.addEventListener('submit', async (e) => {
   statusEl.textContent = 'Keresés folyamatban...';
   resultsEl.innerHTML = '';
   exportBar.style.display = 'none';
+  document.getElementById('selectAll').checked = true;
 
   const settled = await Promise.allSettled(
     selectedSources.map(key => SOURCE_FETCHERS[key].fetch(topic, count, yearFrom, yearTo))
