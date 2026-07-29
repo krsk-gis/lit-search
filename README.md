@@ -1,4 +1,4 @@
-# lit-search (v2.7)
+# lit-search (v2.4.1)
 
 Élő szakirodalom-kereső: beírsz egy témát/kulcsszavakat és/vagy egy szerzőt,
 és relevancia, hivatkozásszám vagy dátum szerint rendezve visszaadja a
