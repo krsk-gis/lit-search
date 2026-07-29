@@ -92,6 +92,27 @@
   .article a:hover { text-decoration: underline; color: var(--accent); }
   .meta { color: var(--muted); font-size: 0.85em; margin-top: 6px; }
   .doi { color: var(--muted); font-size: 0.72em; margin-top: 4px; opacity: 0.75; }
+  .citation-links { margin-top: 8px; display: flex; gap: 14px; }
+  .citation-links a.citation-toggle {
+    font-size: 0.8em;
+    color: var(--accent-dark);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .citation-links a.citation-toggle:hover { text-decoration: underline; }
+  .citation-toggle::after { content: ' \25BE'; }
+  .citation-toggle.open::after { content: ' \25B4'; }
+  .citation-panel {
+    display: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 8px 0 0;
+  }
+  .citation-panel.open { display: block; }
+  .citation-empty { color: var(--muted); font-size: 0.8em; text-align: center; padding: 6px; }
+  .article.nested { margin-bottom: 8px; padding: 10px 12px; }
+  .article.nested .article-body a { font-size: 0.92em; }
   .badge {
     display: inline-block;
     font-size: 0.75em;
@@ -168,7 +189,7 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.4.1</span>
+    <span class="version">v2.5</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
@@ -181,6 +202,9 @@
     <li>Alapból relevancia szerint jelennek meg; szűkítheted évtartományra, és igény szerint
       átrendezheted hivatkozásszám vagy dátum szerint is.</li>
     <li>A kijelölt (vagy az összes) találat egy kattintással BibTeX vagy Excel (CSV) fájlba exportálható.</li>
+    <li>DOI-val rendelkező találatoknál a "Hivatkozik" / "Hivatkozzák" linkekkel megnézheted, mit idéz a
+      cikk, illetve mi idézi azt (Semantic Scholar alapján) — a kapcsolódó cikkek is tovább nyithatók,
+      így épülhet a hólabda.</li>
   </ul>
 
   <form id="searchForm">
@@ -342,6 +366,28 @@ function fetchCrossref(topic, author, count, yearFrom, yearTo) {
   return fetchProxy('/api/crossref', 'Crossref', topic, author, count, yearFrom, yearTo);
 }
 
+function articleCoreHTML(a) {
+  const authorText = a.author + (a.journal ? ` &middot; ${a.journal}` : '');
+  const doiAttr = a.doi ? a.doi.replace(/"/g, '&quot;') : '';
+  return `
+    <span class="badge">${a.source}</span>
+    <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
+    <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
+      &middot; <span class="citations">${a.citations} hivatkozás</span>
+      ${a.isOA && a.oaUrl ? `&middot; <a class="oa-badge" href="${a.oaUrl}" target="_blank" rel="noopener">🔓 nyílt hozzáférés</a>` : ''}
+    </div>
+    ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
+    ${a.doi ? `
+      <div class="citation-links">
+        <a href="#" class="citation-toggle" data-direction="references" data-doi="${doiAttr}">Hivatkozik</a>
+        <a href="#" class="citation-toggle" data-direction="citations" data-doi="${doiAttr}">Hivatkozzák</a>
+      </div>
+      <div class="citation-panel" data-panel="references"></div>
+      <div class="citation-panel" data-panel="citations"></div>
+    ` : ''}
+  `;
+}
+
 function renderResults(items) {
   resultsEl.innerHTML = '';
   if (!items.length) {
@@ -351,22 +397,69 @@ function renderResults(items) {
   items.forEach((a, i) => {
     const div = document.createElement('div');
     div.className = 'article';
-    const authorText = a.author + (a.journal ? ` &middot; ${a.journal}` : '');
     div.innerHTML = `
       <input type="checkbox" class="article-select" data-index="${i}" checked>
-      <div class="article-body">
-        <span class="badge">${a.source}</span>
-        <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
-        <div class="meta">${authorText} ${a.year ? '&middot; ' + a.year : ''}
-          &middot; <span class="citations">${a.citations} hivatkozás</span>
-          ${a.isOA && a.oaUrl ? `&middot; <a class="oa-badge" href="${a.oaUrl}" target="_blank" rel="noopener">🔓 nyílt hozzáférés</a>` : ''}
-        </div>
-        ${a.doi ? `<div class="doi">DOI: ${a.doi}</div>` : ''}
-      </div>
+      <div class="article-body">${articleCoreHTML(a)}</div>
     `;
     resultsEl.appendChild(div);
   });
 }
+
+function renderNestedArticles(container, items) {
+  if (!items.length) {
+    container.innerHTML = '<div class="citation-empty">Nincs kapcsolódó találat.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  items.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'article nested';
+    div.innerHTML = `<div class="article-body">${articleCoreHTML(a)}</div>`;
+    container.appendChild(div);
+  });
+}
+
+async function fetchCitations(doi, direction, count) {
+  const params = new URLSearchParams({ doi, direction, count: String(count) });
+  const resp = await fetch(`/api/citations?${params}`);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const base = data.error || `Kapcsolódó cikkek hiba (${resp.status})`;
+    const detail = data.detail ? ` — ${String(data.detail).slice(0, 300)}` : '';
+    throw new Error(base + detail);
+  }
+  return data.results || [];
+}
+
+resultsEl.addEventListener('click', async (e) => {
+  const link = e.target.closest('.citation-toggle');
+  if (!link) return;
+  e.preventDefault();
+
+  const doi = link.dataset.doi;
+  const direction = link.dataset.direction;
+  const body = link.closest('.article-body');
+  const panel = body.querySelector(`:scope > .citation-panel[data-panel="${direction}"]`);
+
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    link.classList.remove('open');
+    return;
+  }
+  panel.classList.add('open');
+  link.classList.add('open');
+
+  if (panel.dataset.loaded === '1') return;
+
+  panel.innerHTML = '<div class="citation-empty">Betöltés...</div>';
+  try {
+    const results = await fetchCitations(doi, direction, 10);
+    renderNestedArticles(panel, results);
+    panel.dataset.loaded = '1';
+  } catch (err) {
+    panel.innerHTML = `<div class="citation-empty">Hiba: ${err.message}</div>`;
+  }
+});
 
 function selectedResults() {
   const checked = Array.from(document.querySelectorAll('.article-select:checked'));
