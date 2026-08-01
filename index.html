@@ -4,19 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📖 Lit Search</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%98%80%EF%B8%8F</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%96</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #fff8f2;
-    --card: #ffffff;
-    --border: #ffd9b3;
-    --text: #3a2213;
-    --muted: #9a6a3f;
-    --accent: #f57c00;
-    --accent-dark: #c2410c;
-    --accent2: #c2410c;
-    --tag-bg: #fff0e0;
-    --tag-text: #c2410c;
+    --bg: #1b1210;
+    --card: #251a17;
+    --border: #40302a;
+    --text: #f4ece4;
+    --muted: #b7a89c;
+    --accent: #eaa48d;
+    --accent-dark: #e0896c;
+    --accent2: #eaa48d;
+    --tag-bg: #3a2620;
+    --tag-text: #eaa48d;
+    --btn-text: #1b1210;
   }
   * { box-sizing: border-box; }
   body {
@@ -29,7 +33,13 @@
   }
   .container { max-width: 1100px; margin: 0 auto; }
   .title-row { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
-  h1 { color: var(--accent-dark); text-align: center; margin-bottom: 4px; font-size: 2em; }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 4px;
+    font-size: 2.4em;
+  }
   .version { color: var(--muted); font-size: 0.65em; font-weight: 600; }
   .subtitle { text-align: center; color: var(--muted); margin-bottom: 4px; font-size: 0.95em; }
   .sources-note { text-align: center; color: var(--muted); margin-bottom: 10px; font-size: 0.8em; }
@@ -83,7 +93,7 @@
   .year-field input { width: 90px; }
   button {
     background: var(--accent-dark);
-    color: #fff;
+    color: var(--btn-text);
     border: none;
     border-radius: 6px;
     padding: 9px 20px;
@@ -147,7 +157,7 @@
   }
   .oa-badge {
     display: inline-block;
-    color: #4a7c52;
+    color: #7fbf82;
     font-size: 0.75em;
     text-decoration: none;
     opacity: 0.85;
@@ -203,7 +213,7 @@
 <div class="container">
   <div class="title-row">
     <h1>📖 Lit Search</h1>
-    <span class="version">v2.5.2</span>
+    <span class="version">v2.6.1</span>
   </div>
   <div class="subtitle">Élő keresés szakirodalmi adatbázisokban</div>
   <div class="sources-note">Jelenlegi források: OpenAlex, Scopus, Semantic Scholar, Crossref</div>
